@@ -1,33 +1,32 @@
 /**
- * components/chat/WelcomeScreen.jsx — Empty State
+ * components/chat/WelcomeScreen.jsx — Text-Only Empty State
  * 
- * Shown when there are no messages yet in the current chat.
- * Displays example questions to help users get started.
+ * Displays categorized sample technical questions without icons.
  */
 
 const EXAMPLE_QUESTIONS = [
   {
-    icon: '🏗️',
+    category: 'ARCHITECTURE',
     text: 'How does the overall architecture work?',
   },
   {
-    icon: '🔐',
+    category: 'SECURITY',
     text: 'How is authentication implemented?',
   },
   {
-    icon: '🗄️',
+    category: 'DATABASE',
     text: 'Explain the database schema and models.',
   },
   {
-    icon: '🔍',
+    category: 'ENTRY POINT',
     text: 'Where is the main entry point of this application?',
   },
   {
-    icon: '⚡',
+    category: 'API ROUTING',
     text: 'How are API requests handled and routed?',
   },
   {
-    icon: '🐛',
+    category: 'ERROR HANDLING',
     text: 'How is error handling done throughout the codebase?',
   },
 ];
@@ -36,13 +35,12 @@ export default function WelcomeScreen({ repoName, onSelectQuestion }) {
   return (
     <div className="welcome-screen">
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '48px', marginBottom: '16px' }}>🧠</div>
+        <div className="welcome-tag">READY TO EXPLORE</div>
         <h1 className="welcome-title">
           Ask about {repoName || 'your repository'}
         </h1>
         <p className="welcome-subtitle">
-          I've indexed the codebase and I'm ready to answer questions<br />
-          using actual code evidence with exact file and line citations.
+          CodeMind is ready to answer questions using exact code citations and file line ranges.
         </p>
       </div>
 
@@ -53,8 +51,9 @@ export default function WelcomeScreen({ repoName, onSelectQuestion }) {
             className="example-question-card"
             onClick={() => onSelectQuestion(q.text)}
             id={`example-question-${index}`}
+            type="button"
           >
-            <div className="example-question-icon">{q.icon}</div>
+            <div className="example-question-category">{q.category}</div>
             <div className="example-question-text">{q.text}</div>
           </button>
         ))}

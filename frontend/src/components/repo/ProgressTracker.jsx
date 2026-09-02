@@ -1,175 +1,92 @@
 /**
- * components/repo/ProgressTracker.jsx — Step-by-Step Flow Pipeline Animation
+ * components/repo/ProgressTracker.jsx — Smooth Continuous Progress Bar
  * 
- * Guarantees a smooth, sequential visual pipeline where:
- *   1. Step 1 (Git Clone) is active -> completes with green checkmark (✓)
- *   2. Step 2 (Codebase Scanner) is active -> completes with green checkmark (✓)
- *   3. Step 3 (AST Code Parsing) is active -> completes with green checkmark (✓)
- *   4. Step 4 (Embedding Engine) is active -> completes with green checkmark (✓)
- *   5. Step 5 (ChromaDB Vector Store) is active -> completes with green checkmark (✓)
- *   6. Step 6 (Ready to Chat) lights up completed with green checkmark (✓)
- *   7. Auto-launches chat smoothly after all steps finish!
+ * Features:
+ *   - Continuous smooth 0% -> 100% counter without sticking
+ *   - Pure text-based status display (no icons)
+ *   - Royal Blue animated glowing progress bar
+ *   - Automatically triggers onComplete when 100% is reached and ready
  */
 
-import { useState, useEffect } from 'react';
-
-const PIPELINE_STEPS = [
-  {
-    key: 'cloning',
-    title: '1. Git Repository Clone',
-    desc: 'Fetching source code and repository structure from GitHub',
-    icon: '📥',
-    duration: 800,
-  },
-  {
-    key: 'scanning',
-    title: '2. Codebase Scanner & Filter',
-    desc: 'Filtering lockfiles, images, binaries and discovering source files',
-    icon: '🔍',
-    duration: 700,
-  },
-  {
-    key: 'chunking',
-    title: '3. AST Code Parsing & Line Splitter',
-    desc: 'Extracting functions, classes, and line-range chunks',
-    icon: '🧩',
-    duration: 800,
-  },
-  {
-    key: 'embedding',
-    title: '4. Semantic Embedding Engine',
-    desc: 'Converting code chunks into 384-dimensional vector embeddings',
-    icon: '🧠',
-    duration: 900,
-  },
-  {
-    key: 'indexing',
-    title: '5. Vector Index Storage (ChromaDB)',
-    desc: 'Saving embeddings to persistent vector store for instant retrieval',
-    icon: '🗄️',
-    duration: 700,
-  },
-  {
-    key: 'ready',
-    title: '6. Ready to Chat',
-    desc: 'Repository fully indexed — AI code assistant initialized',
-    icon: '✨',
-    duration: 900,
-  },
-];
+import { useState, useEffect, useRef } from 'react';
 
 export default function ProgressTracker({ status, progressMessage, onComplete }) {
-  // Current active step index (0 to 5)
-  const [currentStepIdx, setCurrentStepIdx] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [statusText, setStatusText] = useState('Connecting to GitHub repository...');
+  const progressRef = useRef(0);
 
-  // Advance steps sequentially
+  // Smooth continuous progress ticker
   useEffect(() => {
-    // If not at the final step, schedule next step transition
-    if (currentStepIdx < PIPELINE_STEPS.length - 1) {
-      const stepDuration = PIPELINE_STEPS[currentStepIdx].duration;
+    const interval = setInterval(() => {
+      setProgress((prev) => {
+        // If backend is ready, smoothly accelerate to 100%
+        if (status === 'ready') {
+          const next = Math.min(100, prev + (prev < 90 ? 4 : 2));
+          progressRef.current = next;
+          return next;
+        }
+
+        // Natural smooth progression: fast at start, steadily continues towards 96%
+        let increment = 1;
+        if (prev < 30) increment = 2.5;
+        else if (prev < 60) increment = 1.6;
+        else if (prev < 85) increment = 0.9;
+        else if (prev < 96) increment = 0.3;
+        else increment = 0; // Wait at 96% until backend is ready
+
+        const next = Math.min(96, +(prev + increment).toFixed(1));
+        progressRef.current = next;
+        return next;
+      });
+    }, 80);
+
+    return () => clearInterval(interval);
+  }, [status]);
+
+  // Update dynamic status text based on progress percentage
+  useEffect(() => {
+    if (progress >= 100 && status === 'ready') {
+      setStatusText('Indexing complete. Initializing chat...');
       const timer = setTimeout(() => {
-        setCurrentStepIdx((prev) => prev + 1);
-      }, stepDuration);
+        if (onComplete) onComplete();
+      }, 500);
       return () => clearTimeout(timer);
+    } else if (progress >= 85) {
+      setStatusText('Storing vectors in ChromaDB database...');
+    } else if (progress >= 60) {
+      setStatusText('Generating 384-dimensional semantic embeddings...');
+    } else if (progress >= 35) {
+      setStatusText('Parsing AST functions, classes, and code chunks...');
+    } else if (progress >= 15) {
+      setStatusText('Scanning repository and discovering source files...');
+    } else {
+      setStatusText('Cloning repository from GitHub...');
     }
-    
-    // If at final step and backend is ready, notify parent after a short celebration pause
-    if (currentStepIdx >= PIPELINE_STEPS.length - 1 && status === 'ready') {
-      const readyTimer = setTimeout(() => {
-        if (onComplete) onComplete();
-      }, 900);
-      return () => clearTimeout(readyTimer);
-    }
-  }, [currentStepIdx, status, onComplete]);
-
-  // If backend was waiting at intermediate step, finish smoothly when ready
-  useEffect(() => {
-    if (status === 'ready' && currentStepIdx >= PIPELINE_STEPS.length - 1) {
-      const finishTimer = setTimeout(() => {
-        if (onComplete) onComplete();
-      }, 900);
-      return () => clearTimeout(finishTimer);
-    }
-  }, [status, currentStepIdx, onComplete]);
+  }, [progress, status, onComplete]);
 
   return (
-    <div className="flow-pipeline-container">
-      {/* Pipeline Header Badge */}
-      <div className="pipeline-header-badge">
-        <span className="pipeline-pulse-indicator" />
-        <span className="pipeline-header-text">
-          {currentStepIdx === PIPELINE_STEPS.length - 1 && status === 'ready'
-            ? '✅ Indexing Complete — Launching Chat'
-            : `⚡ Executing Step ${currentStepIdx + 1} of 6`}
-        </span>
+    <div className="smooth-progress-container">
+      {/* Top Status & Percentage Row */}
+      <div className="progress-info-row">
+        <div className="progress-status-label">
+          <span className="status-live-indicator" />
+          <span>{statusText}</span>
+        </div>
+        <div className="progress-number-display">{Math.floor(progress)}%</div>
       </div>
 
-      {/* Connected Steps List */}
-      <div className="pipeline-steps-wrapper">
-        {PIPELINE_STEPS.map((step, index) => {
-          let state = 'pending';
-          if (index < currentStepIdx) {
-            state = 'done';
-          } else if (index === currentStepIdx) {
-            // If at the last step and backend is ready, mark it done
-            if (index === PIPELINE_STEPS.length - 1 && status === 'ready') {
-              state = 'done';
-            } else {
-              state = 'active';
-            }
-          }
-
-          const isLast = index === PIPELINE_STEPS.length - 1;
-
-          return (
-            <div key={step.key} className={`pipeline-step-item pipeline-step-${state}`}>
-              <div className="pipeline-node-row">
-                {/* Node Badge Icon */}
-                <div className={`pipeline-node-icon pipeline-node-${state}`}>
-                  {state === 'done' ? (
-                    <span className="pipeline-check-icon">✓</span>
-                  ) : state === 'active' ? (
-                    <span className="pipeline-spinner-ring" />
-                  ) : (
-                    <span className="pipeline-static-icon">{step.icon}</span>
-                  )}
-                </div>
-
-                {/* Node Details */}
-                <div className="pipeline-node-content">
-                  <div className="pipeline-node-title">
-                    <span className="pipeline-title-text">{step.title}</span>
-                    {state === 'active' && <span className="pipeline-badge-active">IN PROGRESS</span>}
-                    {state === 'done' && <span className="pipeline-badge-done">COMPLETED ✓</span>}
-                  </div>
-                  <div className="pipeline-node-desc">{step.desc}</div>
-                </div>
-              </div>
-
-              {/* Connecting Laser Line to Next Step */}
-              {!isLast && (
-                <div className={`pipeline-connector-track connector-${state}`}>
-                  <div
-                    className={`pipeline-connector-line ${
-                      state === 'active'
-                        ? 'animating-flow'
-                        : state === 'done'
-                        ? 'connector-done'
-                        : ''
-                    }`}
-                  />
-                </div>
-              )}
-            </div>
-          );
-        })}
+      {/* Royal Blue Progress Bar Track */}
+      <div className="progress-bar-track">
+        <div
+          className="progress-bar-fill"
+          style={{ width: `${progress}%` }}
+        />
       </div>
 
-      {/* Live Status Message Ticker */}
+      {/* Backend detail message if available */}
       {progressMessage && (
-        <div className="pipeline-live-ticker">
-          <span className="live-ticker-dot" />
-          <span className="live-ticker-text">{progressMessage}</span>
+        <div className="progress-detail-text">
+          {progressMessage}
         </div>
       )}
     </div>

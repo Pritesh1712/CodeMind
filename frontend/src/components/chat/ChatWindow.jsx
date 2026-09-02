@@ -85,7 +85,7 @@ export default function ChatWindow() {
       addMessage({
         id: `temp-error-${Date.now()}`,
         role: 'assistant',
-        content: `❌ ${err.message}`,
+        content: `Error: ${err.message}`,
         citations: [],
         created_at: new Date().toISOString(),
       });
@@ -101,7 +101,7 @@ export default function ChatWindow() {
   const repoName = currentRepository?.name || '';
 
   return (
-    <div className="main-area">
+    <div className="chat-window">
       {/* Header */}
       <div className="chat-header">
         <div>
@@ -114,7 +114,7 @@ export default function ChatWindow() {
           </div>
           {repoName && (
             <div className="chat-header-repo">
-              📦 {repoName} · {currentRepository?.chunks_count || 0} chunks indexed
+              {repoName} · {currentRepository?.chunks_count || 0} chunks indexed
             </div>
           )}
         </div>

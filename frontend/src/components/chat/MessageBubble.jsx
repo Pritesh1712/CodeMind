@@ -1,11 +1,5 @@
 /**
- * components/chat/MessageBubble.jsx — Individual Chat Message with Smooth Streaming Animation
- * 
- * Features:
- *   - ChatGPT-style typewriter streaming animation for newly generated answers
- *   - Blinking cursor indicator during generation
- *   - Fades in citations, confidence badge, and clickable follow-up pills upon completion
- *   - 1-click skip animation on click
+ * components/chat/MessageBubble.jsx — Modern Chat Bubble with User & AI Logos
  */
 
 import { useState, useEffect, useRef } from 'react';
@@ -17,13 +11,11 @@ export default function MessageBubble({ message, onSelectFollowUp, isLastMessage
   const citations = message.citations || [];
   const followUps = message.follow_up_questions || [];
 
-  // Typewriter streaming state for newly received AI messages
   const shouldAnimate = !isUser && message.isStreaming;
   const [displayedText, setDisplayedText] = useState(shouldAnimate ? '' : message.content);
   const [isTyping, setIsTyping] = useState(shouldAnimate);
 
   const fullText = message.content || '';
-  const indexRef = useRef(0);
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -33,19 +25,15 @@ export default function MessageBubble({ message, onSelectFollowUp, isLastMessage
       return;
     }
 
-    // Start ChatGPT-style word/chunk streaming animation
-    indexRef.current = 0;
     setDisplayedText('');
     setIsTyping(true);
 
-    // Stream in chunks of words for natural, smooth reading flow
     const words = fullText.split(/(\s+)/);
     let currentIdx = 0;
     let accumulated = '';
 
     const interval = setInterval(() => {
       if (currentIdx < words.length) {
-        // Take 1 to 2 words per tick
         const nextChunk = (words[currentIdx] || '') + (words[currentIdx + 1] || '');
         currentIdx += 2;
         accumulated += nextChunk;
@@ -55,14 +43,12 @@ export default function MessageBubble({ message, onSelectFollowUp, isLastMessage
         setDisplayedText(fullText);
         setIsTyping(false);
       }
-    }, 22); // ~45 tokens/sec reading speed
+    }, 20);
 
     timerRef.current = interval;
-
     return () => clearInterval(interval);
   }, [fullText, shouldAnimate]);
 
-  // Allow clicking anywhere on the message to instantly finish streaming
   const handleSkipAnimation = () => {
     if (isTyping) {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -72,10 +58,20 @@ export default function MessageBubble({ message, onSelectFollowUp, isLastMessage
   };
 
   return (
-    <div className={`message ${isUser ? 'message-user' : ''}`}>
-      {/* Avatar */}
+    <div className={`message ${isUser ? 'message-user' : 'message-ai'}`}>
+      {/* Avatar with SVG Logo */}
       <div className={`message-avatar ${isUser ? 'message-avatar-user' : 'message-avatar-ai'}`}>
-        {isUser ? '👤' : '🤖'}
+        {isUser ? (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+        ) : (
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        )}
       </div>
 
       {/* Content */}
@@ -91,50 +87,40 @@ export default function MessageBubble({ message, onSelectFollowUp, isLastMessage
           )}
         </div>
 
-        {/* Citations, Confidence & Follow-ups (revealed once typing completes) */}
+        {/* Citations, Confidence & Follow-ups */}
         {!isUser && !isTyping && (
           <div className="message-meta-section animate-fade-in">
             {/* Citations */}
             {citations.length > 0 && (
               <div className="citations-section">
                 {citations.map((citation, index) => (
-                  <CitationBadge
-                    key={`${citation.file_path}-${citation.start_line}-${index}`}
-                    citation={citation}
-                  />
+                  <CitationBadge key={index} citation={citation} />
                 ))}
               </div>
             )}
 
-            {/* Confidence badge */}
+            {/* Confidence Score */}
             {message.confidence_score !== undefined && (
-              <div style={{ marginTop: '8px' }}>
-                <span className={`confidence-badge ${
-                  message.confidence_score >= 0.25 ? 'confidence-high' : 'confidence-low'
-                }`}>
-                  {message.confidence_score >= 0.25 ? '✓' : '⚠'} Confidence:{' '}
-                  {Math.round(message.confidence_score * 100)}%
-                </span>
+              <div className="confidence-pill">
+                Confidence: {Math.round((message.confidence_score || 0) * 100)}%
               </div>
             )}
 
-            {/* Interactive Follow-up Questions (1-click exploration) */}
+            {/* Suggested Follow-up Questions */}
             {followUps.length > 0 && (
-              <div className="followup-questions-container">
-                <div className="followup-questions-title">
-                  <span>💡 Suggested Next Questions:</span>
+              <div className="follow-up-container">
+                <div className="follow-up-header">
+                  Suggested Next Questions
                 </div>
-                <div className="followup-questions-list">
-                  {followUps.map((question, idx) => (
+                <div className="follow-up-list">
+                  {followUps.map((q, idx) => (
                     <button
                       key={idx}
-                      className="followup-pill-btn"
-                      onClick={() => onSelectFollowUp && onSelectFollowUp(question)}
+                      className="follow-up-pill"
+                      onClick={() => onSelectFollowUp && onSelectFollowUp(q)}
                       type="button"
                     >
-                      <span className="followup-pill-icon">💬</span>
-                      <span className="followup-pill-text">{question}</span>
-                      <span className="followup-pill-arrow">→</span>
+                      {q}
                     </button>
                   ))}
                 </div>

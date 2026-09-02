@@ -1,8 +1,5 @@
 /**
- * components/citations/CitationBadge.jsx — Clickable Citation Badge
- * 
- * Displays a citation like:  📄 src/auth.py:42-67
- * Clicking it opens the CodeViewerModal showing that code.
+ * components/citations/CitationBadge.jsx — Clickable Text-Only Citation Badge
  */
 
 import { useState } from 'react';
@@ -20,8 +17,9 @@ export default function CitationBadge({ citation }) {
         onClick={() => setIsOpen(true)}
         title="Click to view source code"
         id={`citation-${citation.file_path}-${citation.start_line}`}
+        type="button"
       >
-        📄 {label}
+        <span className="citation-text">{label}</span>
       </button>
 
       {isOpen && (

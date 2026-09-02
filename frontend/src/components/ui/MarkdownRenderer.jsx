@@ -56,7 +56,7 @@ function CodeBlock({ language, codeString, ...props }) {
           title="Copy code"
           type="button"
         >
-          {copied ? '✓ Copied!' : '📋 Copy'}
+          {copied ? 'Copied' : 'Copy'}
         </button>
       </div>
       <SyntaxHighlighter

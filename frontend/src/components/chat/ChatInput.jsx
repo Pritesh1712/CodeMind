@@ -1,11 +1,5 @@
 /**
- * components/chat/ChatInput.jsx — Message Input Box
- * 
- * Features:
- *   - Auto-resizing textarea
- *   - Enter to send (Shift+Enter for newline)
- *   - Disabled while loading
- *   - Send button
+ * components/chat/ChatInput.jsx — Modern Chat Input with Send Icon
  */
 
 import { useState, useRef, useEffect } from 'react';
@@ -18,17 +12,16 @@ export default function ChatInput({ onSend, isLoading, disabled }) {
   useEffect(() => {
     const textarea = textareaRef.current;
     if (textarea) {
-      textarea.style.height = 'auto';  // reset first
-      textarea.style.height = `${textarea.scrollHeight}px`;  // then set to content height
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
     }
   }, [text]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();  // prevent newline
+      e.preventDefault();
       handleSend();
     }
-    // Shift+Enter = newline (default browser behavior, no need to handle)
   };
 
   const handleSend = () => {
@@ -38,7 +31,6 @@ export default function ChatInput({ onSend, isLoading, disabled }) {
     onSend(trimmed);
     setText('');
     
-    // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
@@ -69,17 +61,12 @@ export default function ChatInput({ onSend, isLoading, disabled }) {
             disabled={!text.trim() || isLoading || disabled}
             aria-label="Send message"
             id="chat-send-button"
+            type="button"
           >
             {isLoading ? (
-              // Loading spinner
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeDasharray="40" strokeDashoffset="10">
-                  <animate attributeName="stroke-dashoffset" from="40" to="0" dur="1s" repeatCount="indefinite" />
-                </path>
-              </svg>
+              <span className="btn-spinner" />
             ) : (
-              // Send arrow icon
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="22" y1="2" x2="11" y2="13" />
                 <polygon points="22 2 15 22 11 13 2 9 22 2" />
               </svg>

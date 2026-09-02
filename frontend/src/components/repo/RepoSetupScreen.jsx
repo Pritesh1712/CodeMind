@@ -1,10 +1,5 @@
 /**
  * components/repo/RepoSetupScreen.jsx — Repository Input & Selection Screen
- * 
- * Allows users to:
- *   1. Paste a new GitHub repository URL to index
- *   2. Select from previously indexed repositories
- *   3. Delete any indexed repository
  */
 
 import { useState, useEffect, useRef } from 'react';
@@ -114,7 +109,7 @@ export default function RepoSetupScreen({ onSelectRepo, onCancel }) {
 
   const handleDeleteRepo = async (e, repoId) => {
     e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this repository and all its chat history?')) {
+    if (!window.confirm('Are you sure you want to delete this repository and its chat history?')) {
       return;
     }
 
@@ -129,11 +124,6 @@ export default function RepoSetupScreen({ onSelectRepo, onCancel }) {
     }
   };
 
-  const isIndexingInProgress =
-    currentRepository &&
-    currentRepository.status !== 'ready' &&
-    currentRepository.status !== 'failed';
-
   const hasFailed = currentRepository?.status === 'failed';
 
   return (
@@ -141,26 +131,30 @@ export default function RepoSetupScreen({ onSelectRepo, onCancel }) {
       <div className="repo-setup-card">
         {/* Back button if a repo was already active */}
         {onCancel && (
-          <div style={{ marginBottom: '12px' }}>
+          <div style={{ marginBottom: '16px' }}>
             <button
               className="btn btn-ghost"
               onClick={onCancel}
-              style={{ fontSize: '12px', padding: '4px 8px' }}
+              style={{ fontSize: '12px', padding: '4px 10px', gap: '6px' }}
               type="button"
             >
-              ← Back to Chat
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="19" y1="12" x2="5" y2="12" />
+                <polyline points="12 19 5 12 12 5" />
+              </svg>
+              <span>Back to Chat</span>
             </button>
           </div>
         )}
 
-        {/* Icon */}
-        <div className="repo-setup-icon">🧠</div>
-
         {/* Title */}
-        <h1 className="repo-setup-title">CodeMind</h1>
-        <p className="repo-setup-subtitle">
-          Analyze any public GitHub repository and explore its codebase with AI
-        </p>
+        <div className="repo-brand-header">
+          <div className="brand-tag">PORTAL</div>
+          <h1 className="repo-setup-title">CodeMind</h1>
+          <p className="repo-setup-subtitle">
+            Index any public GitHub repository to explore and analyze with AI
+          </p>
+        </div>
 
         {/* URL Input Form */}
         <form onSubmit={handleSubmit}>
@@ -181,7 +175,7 @@ export default function RepoSetupScreen({ onSelectRepo, onCancel }) {
 
           {formError && (
             <div className="error-banner" style={{ marginBottom: '16px' }}>
-              <span>⚠️ {formError}</span>
+              <span>Error: {formError}</span>
             </div>
           )}
 
@@ -190,15 +184,28 @@ export default function RepoSetupScreen({ onSelectRepo, onCancel }) {
             className="btn btn-primary btn-full"
             disabled={isSubmitting || isFlowAnimating}
             id="analyze-repo-button"
+            style={{ gap: '8px' }}
           >
-            {isSubmitting ? 'Starting...' : isFlowAnimating ? 'Analyzing...' : '🔍 Analyze Repository'}
+            {isSubmitting ? (
+              'Starting...'
+            ) : isFlowAnimating ? (
+              'Analyzing...'
+            ) : (
+              <>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <span>Analyze Repository</span>
+              </>
+            )}
           </button>
         </form>
 
-        {/* Progress tracker while indexing & animating */}
+        {/* Continuous Progress Tracker */}
         {currentRepository && isFlowAnimating && (
           <div style={{ marginTop: '24px' }}>
-            <div className="sidebar-label" style={{ marginBottom: '12px' }}>
+            <div className="sidebar-label" style={{ marginBottom: '8px' }}>
               Indexing {currentRepository.name || currentRepository.url}
             </div>
             <ProgressTracker
@@ -219,13 +226,13 @@ export default function RepoSetupScreen({ onSelectRepo, onCancel }) {
               <strong>Indexing failed</strong><br />
               {currentRepository.error_message}
               <br /><br />
-              You can try again with the same URL.
+              Please check the URL and try again.
             </div>
           </div>
         )}
 
         {/* Indexed Repositories List */}
-        {repositories.length > 0 && !isIndexingInProgress && (
+        {repositories.length > 0 && !isFlowAnimating && (
           <div style={{ marginTop: '24px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
             <div className="sidebar-label" style={{ marginBottom: '10px' }}>
               Indexed Repositories ({repositories.length})
@@ -234,22 +241,14 @@ export default function RepoSetupScreen({ onSelectRepo, onCancel }) {
               {repositories.map((repo) => (
                 <div
                   key={repo.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 12px',
-                    background: 'var(--bg-tertiary)',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid var(--border-color)',
-                  }}
+                  className="repo-setup-item"
                 >
                   <div
                     style={{ cursor: 'pointer', flex: 1, overflow: 'hidden' }}
                     onClick={() => onSelectRepo && onSelectRepo(repo)}
                   >
                     <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                      📦 {repo.name || repo.url}
+                      {repo.name || repo.url}
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                       {repo.chunks_count || 0} chunks indexed
@@ -258,21 +257,23 @@ export default function RepoSetupScreen({ onSelectRepo, onCancel }) {
                   <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                     <button
                       className="btn btn-secondary"
-                      style={{ fontSize: '11px', padding: '4px 8px' }}
+                      style={{ fontSize: '11px', padding: '4px 10px' }}
                       onClick={() => onSelectRepo && onSelectRepo(repo)}
                       type="button"
                     >
-                      Open Chat
+                      Open
                     </button>
                     <button
                       className="btn btn-ghost"
-                      style={{ fontSize: '12px', padding: '4px 6px', color: 'var(--error)' }}
+                      style={{ fontSize: '11px', padding: '4px 8px', color: 'var(--error)' }}
                       onClick={(e) => handleDeleteRepo(e, repo.id)}
                       disabled={deletingId === repo.id}
-                      title="Delete repository"
                       type="button"
                     >
-                      {deletingId === repo.id ? '...' : '🗑️'}
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
                     </button>
                   </div>
                 </div>
@@ -282,10 +283,10 @@ export default function RepoSetupScreen({ onSelectRepo, onCancel }) {
         )}
 
         {/* Example repos */}
-        {!isIndexingInProgress && repositories.length === 0 && (
+        {!isFlowAnimating && repositories.length === 0 && (
           <div style={{ marginTop: '24px' }}>
             <div className="sidebar-label" style={{ marginBottom: '8px' }}>
-              Try these repositories
+              Sample Repositories
             </div>
             {[
               'https://github.com/tiangolo/fastapi',
@@ -297,7 +298,7 @@ export default function RepoSetupScreen({ onSelectRepo, onCancel }) {
                 className="btn btn-ghost btn-full"
                 style={{ marginBottom: '6px', justifyContent: 'flex-start', fontFamily: 'var(--font-mono)', fontSize: '12px' }}
                 onClick={() => setUrl(example)}
-                disabled={isSubmitting || isIndexingInProgress}
+                disabled={isSubmitting || isFlowAnimating}
                 type="button"
               >
                 {example}
