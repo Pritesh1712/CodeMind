@@ -1,0 +1,35 @@
+# .gitignore for CodeMind
+
+# ── Python ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyc
+venv/
+.venv/
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+*.log
+
+# ── Environment ───────────────────────────────────────────────
+.env
+*.env.local
+
+# ── Data (generated, not for version control) ─────────────────
+data/repos/
+data/chroma/
+backend/codemind.db
+
+# ── Node / Frontend ───────────────────────────────────────────
+node_modules/
+frontend/dist/
+
+# ── OS ───────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── IDE ──────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
