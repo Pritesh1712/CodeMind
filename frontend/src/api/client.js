@@ -11,9 +11,11 @@
 
 import axios from 'axios';
 
-// Use relative URL so Vite proxy forwards /api to http://127.0.0.1:8000
+// Use VITE_API_URL in production, or relative URL in development (forwarded by Vite proxy)
+const baseURL = import.meta.env.VITE_API_URL || '';
+
 const apiClient = axios.create({
-  baseURL: '',
+  baseURL: baseURL,
   headers: {
     'Content-Type': 'application/json',
   },

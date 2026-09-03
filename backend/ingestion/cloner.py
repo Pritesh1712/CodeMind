@@ -58,27 +58,28 @@ def clone_repository(url: str, repo_id: str) -> Path:
     """
     clone_path = get_clone_path(repo_id)
 
-    # If already cloned, just return the path (avoid redundant work)
+    # If already cloned, unpack any zips and return
     if clone_path.exists() and (clone_path / ".git").exists():
         logger.info(f"Repository already cloned at {clone_path}")
+        _unpack_zip_archives(clone_path)
         return clone_path
 
     # Clean up any partial clone
     if clone_path.exists():
-        shutil.rmtree(clone_path)
+        delete_clone(repo_id)
 
     logger.info(f"Cloning {url} → {clone_path}")
 
     try:
         # Clone with a depth limit to speed things up for large repos
-        # depth=1 means we only get the latest commit, not full history
         Repo.clone_from(
             url,
             str(clone_path),
-            depth=1,               # shallow clone — faster!
+            depth=1,
             no_single_branch=False,
         )
         logger.info(f"Clone complete: {clone_path}")
+        _unpack_zip_archives(clone_path)
         return clone_path
 
     except GitCommandError as e:
@@ -104,6 +105,20 @@ def _remove_readonly(func, path, exc_info):
         func(path)
     except Exception:
         pass
+
+
+def _unpack_zip_archives(clone_path: Path):
+    """Recursively unzips any .zip archives in the repository."""
+    import zipfile
+    for zip_file in list(clone_path.glob("*.zip")) + list(clone_path.glob("*/*.zip")):
+        try:
+            extract_target = zip_file.parent / zip_file.stem
+            if not extract_target.exists():
+                logger.info(f"Unpacking archive {zip_file.name} to {extract_target}")
+                with zipfile.ZipFile(zip_file, 'r') as z:
+                    z.extractall(extract_target)
+        except Exception as ze:
+            logger.warning(f"Could not extract zip archive {zip_file}: {ze}")
 
 
 def delete_clone(repo_id: str):

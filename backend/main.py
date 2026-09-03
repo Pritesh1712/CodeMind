@@ -79,19 +79,13 @@ app = FastAPI(
 
 
 # ── CORS Middleware ───────────────────────────────────────────────────────────
-# CORS (Cross-Origin Resource Sharing) allows the React frontend (port 5173)
-# to make requests to this backend (port 8000).
-# Without CORS, browsers block cross-origin requests by default.
+# Allow requests from frontend in development and production deployments
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",   # Vite dev server
-        "http://localhost:3000",   # Create React App dev server
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],   # Allow GET, POST, DELETE, etc.
-    allow_headers=["*"],   # Allow all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -109,11 +103,30 @@ def health_check():
     return {"status": "ok", "service": "CodeMind API"}
 
 
-@app.get("/", tags=["meta"])
-def root():
-    """Root endpoint — shows basic info."""
-    return {
-        "message": "Welcome to CodeMind API",
-        "docs": "/docs",
-        "health": "/health",
-    }
+# ── Serve Built Frontend (Single-Port Production Deployment) ──────────────────
+import os
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+frontend_dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+
+if frontend_dist.exists():
+    app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
+
+    @app.get("/{full_path:path}", tags=["frontend"])
+    async def serve_spa(full_path: str):
+        file_path = frontend_dist / full_path
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(file_path)
+        return FileResponse(frontend_dist / "index.html")
+else:
+    @app.get("/", tags=["meta"])
+    def root():
+        """Root endpoint when frontend is hosted separately."""
+        return {
+            "message": "Welcome to CodeMind API",
+            "docs": "/docs",
+            "health": "/health",
+        }
+

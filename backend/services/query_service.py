@@ -75,19 +75,25 @@ def answer_question(
 
     # ── Step 4: Generate answer ───────────────────────────────────────────────
     follow_up_questions = []
-    if not confidence.is_sufficient:
-        # Not enough evidence — return an honest response
-        answer = _build_insufficient_evidence_response(chunks)
-        citations = build_citations_from_chunks(chunks[:3])  # show what we found
-
-    else:
-        # We have evidence — generate an LLM answer
+    if chunks:
+        # We have code/file evidence — generate an LLM answer
         messages = build_prompt(question, chunks, repo_name)
         raw_answer = generate_answer(messages)
         citations = build_citations_from_chunks(chunks)
         # Extract 2-3 logical follow-up questions
         from generation.answer_parser import extract_follow_up_questions
         answer, follow_up_questions = extract_follow_up_questions(raw_answer)
+    else:
+        # No chunks found in vector index
+        answer = (
+            f"I couldn't find any code files indexed in **{repo_name}** to answer this question.\n\n"
+            "This may occur if the repository is empty, contains only non-code binary assets, or is still being indexed."
+        )
+        citations = []
+        follow_up_questions = [
+            f"What is the intended tech stack for {repo_name}?",
+            "What files or folders are present in this repository?",
+        ]
 
     # ── Step 5: Return result ─────────────────────────────────────────────────
     return ChatResponse(
