@@ -57,13 +57,18 @@ def get_collection_name(repository_id: str) -> str:
     return f"repo_{safe_id}"[:63]
 
 
-def store_chunks(repository_id: str, chunks: List[CodeChunk]) -> int:
+def store_chunks(
+    repository_id: str,
+    chunks: List[CodeChunk],
+    progress_callback: Optional[Any] = None,
+) -> int:
     """
-    Embeds and stores a list of CodeChunks in ChromaDB.
+    Embeds and stores a list of CodeChunks in ChromaDB in non-blocking small batches.
 
     Args:
         repository_id: Unique ID of the repository
         chunks: List of code chunks to store
+        progress_callback: Optional callback(stored_count, total_count)
 
     Returns:
         Number of chunks successfully stored
@@ -80,8 +85,8 @@ def store_chunks(repository_id: str, chunks: List[CodeChunk]) -> int:
         metadata={"repository_id": repository_id},
     )
 
-    # Process in batches to avoid memory issues with large repos
-    batch_size = 100
+    # Process in small batches (32) to keep CPU & memory ultra light
+    batch_size = 32
     total_stored = 0
 
     for i in range(0, len(chunks), batch_size):
@@ -101,12 +106,17 @@ def store_chunks(repository_id: str, chunks: List[CodeChunk]) -> int:
         collection.upsert(
             ids=ids,
             embeddings=embeddings,
-            documents=texts,    # store original text too (for inspection)
+            documents=texts,
             metadatas=metadatas,
         )
 
         total_stored += len(batch)
-        logger.debug(f"Stored batch {i//batch_size + 1}: {len(batch)} chunks")
+        if progress_callback:
+            try:
+                progress_callback(total_stored, len(chunks))
+            except Exception:
+                pass
+        logger.debug(f"Stored batch {i//batch_size + 1}: {len(batch)} chunks ({total_stored}/{len(chunks)})")
 
     logger.info(f"Stored {total_stored} chunks for repo {repository_id}")
     return total_stored

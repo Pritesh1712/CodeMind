@@ -111,12 +111,14 @@ async def index_repository(
         _update_status(session, repo, RepositoryStatus.EMBEDDING,
                        f"Computing 384-d semantic embeddings for {len(all_chunks)} chunks...")
 
-        stored_count = store_chunks(repository_id, all_chunks)
-        await asyncio.sleep(0.4)
+        # Run CPU-bound embedding & vector upsert in a worker thread so event loop and health checks never freeze
+        def _progress(stored, total):
+            _update_status(session, repo, RepositoryStatus.INDEXING,
+                           f"Embedded and stored {stored}/{total} code chunks into ChromaDB...")
 
-        _update_status(session, repo, RepositoryStatus.INDEXING,
-                       f"Saving {stored_count} embeddings into ChromaDB vector store...")
-        await asyncio.sleep(0.4)
+        stored_count = await asyncio.to_thread(
+            store_chunks, repository_id, all_chunks, _progress
+        )
 
         # ── Done! ─────────────────────────────────────────────────────────────
         repo.status = RepositoryStatus.READY
