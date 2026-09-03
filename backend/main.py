@@ -27,6 +27,9 @@ if sys.platform == "win32":
     except Exception:
         pass
 
+import os
+os.environ["ANONYMIZED_TELEMETRY"] = "False"
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -46,6 +49,10 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
     handlers=[logging.StreamHandler(sys.stdout)],
 )
+# Silence internal third-party telemetry notices
+logging.getLogger("chromadb.telemetry").setLevel(logging.CRITICAL)
+logging.getLogger("posthog").setLevel(logging.CRITICAL)
+
 logger = logging.getLogger(__name__)
 
 
