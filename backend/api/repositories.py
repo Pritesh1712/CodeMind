@@ -65,26 +65,24 @@ async def analyze_repository(
     ).first()
 
     if existing:
-        # If it's ready or currently being indexed, return existing
-        if existing.status in (RepositoryStatus.READY, RepositoryStatus.CLONING,
-                               RepositoryStatus.SCANNING, RepositoryStatus.CHUNKING,
-                               RepositoryStatus.EMBEDDING, RepositoryStatus.INDEXING):
-            logger.info(f"Repository already exists: {existing.id}")
+        # If it's already fully ready with indexed chunks, return it immediately
+        if existing.status == RepositoryStatus.READY and (existing.chunks_count or 0) > 0:
+            logger.info(f"Repository already ready: {existing.id}")
             return _repo_to_response(existing)
 
-        # If it previously failed, allow re-indexing by resetting status
-        if existing.status == RepositoryStatus.FAILED:
-            existing.status = RepositoryStatus.PENDING
-            existing.error_message = None
-            existing.progress_message = "Re-starting indexing..."
-            session.add(existing)
-            session.commit()
-            session.refresh(existing)
+        # If it was pending, in-progress during server restart, or failed, re-run indexing
+        existing.status = RepositoryStatus.PENDING
+        existing.error_message = None
+        existing.progress_message = "Starting indexing pipeline..."
+        session.add(existing)
+        session.commit()
+        session.refresh(existing)
 
-            background_tasks.add_task(
-                _run_indexing, existing.id, url
-            )
-            return _repo_to_response(existing)
+        background_tasks.add_task(
+            _run_indexing, existing.id, url
+        )
+        logger.info(f"Restarting indexing for {url} (id={existing.id})")
+        return _repo_to_response(existing)
 
     # ── Create new repository record ──────────────────────────────────────────
     repo = Repository(url=url, status=RepositoryStatus.PENDING)

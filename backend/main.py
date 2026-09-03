@@ -67,7 +67,7 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 CodeMind backend starting...")
     create_db_and_tables()  # Create SQLite tables if they don't exist
     logger.info("✅ Database ready")
-    logger.info("📂 Repos directory: {settings.get_repos_path()}")
+    logger.info(f"📂 Repos directory: {settings.get_repos_path()}")
     logger.info(f"🗄️  ChromaDB directory: {settings.get_chroma_path()}")
 
     yield  # Application runs here and opens port immediately
