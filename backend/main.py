@@ -63,6 +63,15 @@ async def lifespan(app: FastAPI):
     logger.info(f"📂 Repos directory: {settings.get_repos_path()}")
     logger.info(f"🗄️  ChromaDB directory: {settings.get_chroma_path()}")
 
+    # Pre-warm embedding model on startup so user requests respond instantly
+    try:
+        from embeddings.embedder import get_model
+        logger.info("🧠 Pre-warming embedding model...")
+        get_model()
+        logger.info("✅ Embedding model ready in memory")
+    except Exception as e:
+        logger.warning(f"Embedding model pre-warm skipped: {e}")
+
     yield  # Application runs here
 
     # Shutdown (cleanup if needed)

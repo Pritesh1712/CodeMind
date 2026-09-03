@@ -19,7 +19,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 120000, // 2 minutes timeout for cloning/indexing operations
+  timeout: 300000, // 5 minutes timeout for cloud cold starts and indexing operations
 });
 
 // ── Response interceptor ──────────────────────────────────────────────────────
