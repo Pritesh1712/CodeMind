@@ -28,8 +28,9 @@ WORKDIR /app
 COPY backend/requirements.txt ./backend/
 RUN pip install --no-cache-dir -r backend/requirements.txt
 
-# 2. Pre-download FastEmbed ONNX model into Docker image (<35MB RAM, instant boot)
-RUN python -c "from fastembed import TextEmbedding; list(TextEmbedding(model_name='sentence-transformers/all-MiniLM-L6-v2').embed(['warmup']))"
+# 2. Pre-download FastEmbed ONNX model into /app/fastembed_cache (<35MB RAM, zero runtime download)
+ENV FASTEMBED_CACHE_PATH=/app/fastembed_cache
+RUN python -c "from fastembed import TextEmbedding; list(TextEmbedding(model_name='sentence-transformers/all-MiniLM-L6-v2', cache_dir='/app/fastembed_cache').embed(['warmup']))"
 
 # 3. Copy backend code
 COPY backend/ ./backend/
@@ -43,6 +44,7 @@ WORKDIR /app/backend
 # Environment variables
 ENV PYTHONUNBUFFERED=1
 ENV ANONYMIZED_TELEMETRY=False
+ENV FASTEMBED_CACHE_PATH=/app/fastembed_cache
 ENV PORT=8000
 ENV HOST=0.0.0.0
 

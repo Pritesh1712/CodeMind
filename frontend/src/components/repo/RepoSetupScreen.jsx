@@ -59,6 +59,9 @@ export default function RepoSetupScreen({ onSelectRepo, onCancel }) {
             setIndexing(false);
             const list = await listRepositories();
             setRepositories(list || []);
+            if (onSelectRepo) {
+              onSelectRepo(updated);
+            }
           } else if (status.status === 'failed') {
             clearInterval(pollIntervalRef.current);
             setIndexing(false);
@@ -75,7 +78,7 @@ export default function RepoSetupScreen({ onSelectRepo, onCancel }) {
         clearInterval(pollIntervalRef.current);
       }
     };
-  }, [currentRepository?.id, currentRepository?.status]);
+  }, [currentRepository?.id, currentRepository?.status, onSelectRepo]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -87,7 +90,6 @@ export default function RepoSetupScreen({ onSelectRepo, onCancel }) {
     }
 
     setIsSubmitting(true);
-    setIsFlowAnimating(true);
     setIndexing(true);
 
     try {
@@ -95,9 +97,19 @@ export default function RepoSetupScreen({ onSelectRepo, onCancel }) {
       setCurrentRepository(repo);
       setUrl('');
 
-      // Refresh list in background
+      // Refresh list
       const list = await listRepositories();
       setRepositories(list || []);
+
+      if (repo.status === 'ready') {
+        setIsFlowAnimating(false);
+        setIndexing(false);
+        if (onSelectRepo) {
+          onSelectRepo(repo);
+        }
+      } else {
+        setIsFlowAnimating(true);
+      }
     } catch (err) {
       setFormError(err.message || 'Failed to analyze repository');
       setIndexing(false);

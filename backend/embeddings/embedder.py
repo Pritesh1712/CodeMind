@@ -6,6 +6,7 @@ Uses ~30MB of RAM without PyTorch dependencies, preventing any Out-of-Memory (OO
 crashes on 512MB cloud hosting instances.
 """
 
+import os
 import logging
 from typing import List, Optional
 
@@ -23,9 +24,13 @@ def get_model():
     if _model is None:
         try:
             from fastembed import TextEmbedding
-            logger.info("Loading lightweight ONNX embedding model (sentence-transformers/all-MiniLM-L6-v2)...")
-            _model = TextEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
-            logger.info("✅ ONNX Embedding model loaded successfully (<35MB RAM)")
+            cache_dir = os.environ.get("FASTEMBED_CACHE_PATH", None)
+            logger.info(f"Loading ONNX embedding model with cache_dir={cache_dir}...")
+            _model = TextEmbedding(
+                model_name="sentence-transformers/all-MiniLM-L6-v2",
+                cache_dir=cache_dir,
+            )
+            logger.info("✅ ONNX Embedding model ready (<35MB RAM)")
         except Exception as e:
             logger.warning(f"FastEmbed failed ({e}), attempting sentence_transformers fallback...")
             from sentence_transformers import SentenceTransformer
