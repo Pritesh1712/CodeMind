@@ -1,68 +1,107 @@
 /**
- * components/repo/ProgressTracker.jsx — Smooth Continuous Progress Bar
+ * components/repo/ProgressTracker.jsx — Dynamic Real-Time Progress Bar
  * 
  * Features:
- *   - Continuous smooth 0% -> 100% counter without sticking
- *   - Pure text-based status display (no icons)
- *   - Royal Blue animated glowing progress bar
- *   - Automatically triggers onComplete when 100% is reached and ready
+ *   - Continuously tracks actual chunk storage progress (e.g., 192/295 chunks)
+ *   - Smooth interpolation without ever getting stuck at 96%
+ *   - Live backend status text display
+ *   - Smooth transition to 100% upon completion
  */
 
 import { useState, useEffect, useRef } from 'react';
 
 export default function ProgressTracker({ status, progressMessage, onComplete }) {
   const [progress, setProgress] = useState(0);
-  const [statusText, setStatusText] = useState('Connecting to GitHub repository...');
-  const progressRef = useRef(0);
+  const targetProgressRef = useRef(10);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
-  // Smooth continuous progress ticker
+  // Calculate target progress from status and progressMessage
+  useEffect(() => {
+    if (status === 'ready') {
+      targetProgressRef.current = 100;
+      return;
+    }
+
+    if (progressMessage) {
+      // Check for "Embedded and stored X/Y code chunks"
+      const chunkMatch = progressMessage.match(/(\d+)\s*\/\s*(\d+)/);
+      if (chunkMatch) {
+        const stored = parseInt(chunkMatch[1], 10);
+        const total = parseInt(chunkMatch[2], 10);
+        if (total > 0) {
+          // Map stored/total chunks to 35% -> 98%
+          const fraction = Math.min(1, stored / total);
+          targetProgressRef.current = Math.max(targetProgressRef.current, 35 + fraction * 63);
+          return;
+        }
+      }
+
+      // Check for earlier phases
+      if (progressMessage.toLowerCase().includes('cloning')) {
+        targetProgressRef.current = Math.max(targetProgressRef.current, 15);
+      } else if (progressMessage.toLowerCase().includes('scanning') || progressMessage.toLowerCase().includes('found')) {
+        targetProgressRef.current = Math.max(targetProgressRef.current, 25);
+      } else if (progressMessage.toLowerCase().includes('chunking') || progressMessage.toLowerCase().includes('ast')) {
+        targetProgressRef.current = Math.max(targetProgressRef.current, 35);
+      } else if (progressMessage.toLowerCase().includes('embedding') || progressMessage.toLowerCase().includes('computing')) {
+        targetProgressRef.current = Math.max(targetProgressRef.current, 45);
+      }
+    }
+  }, [status, progressMessage]);
+
+  // Smooth frame ticker that glides progress toward targetProgress
   useEffect(() => {
     const interval = setInterval(() => {
       setProgress((prev) => {
-        // If backend is ready, smoothly accelerate to 100%
+        const target = targetProgressRef.current;
+
         if (status === 'ready') {
-          const next = Math.min(100, prev + (prev < 90 ? 4 : 2));
-          progressRef.current = next;
-          return next;
+          if (prev >= 100) return 100;
+          return Math.min(100, +(prev + Math.max(1, (100 - prev) * 0.3)).toFixed(1));
         }
 
-        // Natural smooth progression: fast at start, steadily continues towards 96%
-        let increment = 1;
-        if (prev < 30) increment = 2.5;
-        else if (prev < 60) increment = 1.6;
-        else if (prev < 85) increment = 0.9;
-        else if (prev < 96) increment = 0.3;
-        else increment = 0; // Wait at 96% until backend is ready
+        if (prev < target) {
+          // Smooth glide toward target
+          const diff = target - prev;
+          const step = Math.max(0.2, diff * 0.15);
+          return Math.min(target, +(prev + step).toFixed(1));
+        }
 
-        const next = Math.min(96, +(prev + increment).toFixed(1));
-        progressRef.current = next;
-        return next;
+        // Slight micro-increment to keep it feeling active while waiting
+        if (prev < 98 && target < 98) {
+          targetProgressRef.current = Math.min(98, target + 0.1);
+          return +(prev + 0.05).toFixed(1);
+        }
+
+        return prev;
       });
-    }, 80);
+    }, 60);
 
     return () => clearInterval(interval);
   }, [status]);
 
-  // Update dynamic status text based on progress percentage
+  // Trigger completion once 100% is reached
   useEffect(() => {
     if (progress >= 100 && status === 'ready') {
-      setStatusText('Indexing complete. Initializing chat...');
       const timer = setTimeout(() => {
-        if (onComplete) onComplete();
-      }, 500);
+        if (onCompleteRef.current) {
+          onCompleteRef.current();
+        }
+      }, 400);
       return () => clearTimeout(timer);
-    } else if (progress >= 85) {
-      setStatusText('Storing vectors in ChromaDB database...');
-    } else if (progress >= 60) {
-      setStatusText('Generating 384-dimensional semantic embeddings...');
-    } else if (progress >= 35) {
-      setStatusText('Parsing AST functions, classes, and code chunks...');
-    } else if (progress >= 15) {
-      setStatusText('Scanning repository and discovering source files...');
-    } else {
-      setStatusText('Cloning repository from GitHub...');
     }
-  }, [progress, status, onComplete]);
+  }, [progress, status]);
+
+  // Derive user-friendly display text
+  const displayText = status === 'ready' && progress >= 100
+    ? 'Indexing complete! Starting chat...'
+    : progressMessage || (
+        progress < 20 ? 'Cloning repository from GitHub...' :
+        progress < 35 ? 'Scanning and parsing source code...' :
+        progress < 50 ? 'Generating semantic embeddings...' :
+        'Storing vector representations in database...'
+      );
 
   return (
     <div className="smooth-progress-container">
@@ -70,7 +109,9 @@ export default function ProgressTracker({ status, progressMessage, onComplete })
       <div className="progress-info-row">
         <div className="progress-status-label">
           <span className="status-live-indicator" />
-          <span>{statusText}</span>
+          <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+            {displayText}
+          </span>
         </div>
         <div className="progress-number-display">{Math.floor(progress)}%</div>
       </div>
@@ -79,16 +120,9 @@ export default function ProgressTracker({ status, progressMessage, onComplete })
       <div className="progress-bar-track">
         <div
           className="progress-bar-fill"
-          style={{ width: `${progress}%` }}
+          style={{ width: `${Math.min(100, Math.max(3, progress))}%`, transition: 'width 0.1s ease-out' }}
         />
       </div>
-
-      {/* Backend detail message if available */}
-      {progressMessage && (
-        <div className="progress-detail-text">
-          {progressMessage}
-        </div>
-      )}
     </div>
   );
 }

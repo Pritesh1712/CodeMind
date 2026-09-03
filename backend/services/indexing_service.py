@@ -111,10 +111,21 @@ async def index_repository(
         _update_status(session, repo, RepositoryStatus.EMBEDDING,
                        f"Computing 384-d semantic embeddings for {len(all_chunks)} chunks...")
 
-        # Run CPU-bound embedding & vector upsert in a worker thread so event loop and health checks never freeze
+        # Run CPU-bound embedding & vector upsert in a worker thread with thread-safe DB progress updates
         def _progress(stored, total):
-            _update_status(session, repo, RepositoryStatus.INDEXING,
-                           f"Embedded and stored {stored}/{total} code chunks into ChromaDB...")
+            try:
+                from database import engine
+                from sqlmodel import Session as SQLSession
+                with SQLSession(engine) as thread_session:
+                    thread_repo = thread_session.get(Repository, repository_id)
+                    if thread_repo:
+                        thread_repo.status = RepositoryStatus.INDEXING
+                        thread_repo.progress_message = f"Embedded and stored {stored}/{total} code chunks into ChromaDB..."
+                        thread_session.add(thread_repo)
+                        thread_session.commit()
+            except Exception as pe:
+                logger.debug(f"Progress update write error: {pe}")
+            logger.info(f"[{repo.name or repository_id}] INDEXING: Embedded and stored {stored}/{total} code chunks into ChromaDB...")
 
         stored_count = await asyncio.to_thread(
             store_chunks, repository_id, all_chunks, _progress
